@@ -101,7 +101,10 @@ SignalDispatcher = SignalDispatcher()
 # We completely dynamically generate all classes using introspection data. As
 # this is done at import time, use a special dbus connection that does not get
 # in the way of setting a mainloop and doing async stuff later.
-init_bus = dbus.SystemBus(private=True)
+try:
+    init_bus = dbus.SystemBus(private=True)
+except dbus.exceptions.DBusException:
+    init_bus = None
 xml_cache = {}
 
 class NMDbusInterfaceType(type):
@@ -134,9 +137,11 @@ class NMDbusInterfaceType(type):
         # If we know where to find this object, let's introspect it and
         # generate properties and methods
         if 'object_path' in attrs and attrs['object_path']:
-            proxy = init_bus.get_object(type_.dbus_service, attrs['object_path'])
-            attrs['introspection_data'] = proxy.Introspect(dbus_interface='org.freedesktop.DBus.Introspectable')
-            root = etree.fromstring(attrs['introspection_data'])
+            root = []
+            if init_bus is not None:
+                proxy = init_bus.get_object(type_.dbus_service, attrs['object_path'])
+                attrs['introspection_data'] = proxy.Introspect(dbus_interface='org.freedesktop.DBus.Introspectable')
+                root = etree.fromstring(attrs['introspection_data'])
             for element in root:
                 if element.tag == 'interface' and element.attrib['name'] in attrs['interface_names']:
                     for item in element:
@@ -395,7 +400,6 @@ def device_class(typ):
         NM_DEVICE_TYPE_WIREGUARD: WireGuard,
         NM_DEVICE_TYPE_VRF: Vrf,
         NM_DEVICE_TYPE_WIFI_P2P: WifiP2p,
-        NM_DEVICE_TYPE_LOOPBACK: Loopback,
     }[typ]
 
 class Adsl(Device): pass
@@ -427,7 +431,6 @@ class SixLoWpan(Device): pass
 class WireGuard(Device): pass
 class WifiP2p(Device): pass
 class Vrf(Device): pass
-class Loopback(Device): pass
 
 class NSP(TransientNMDbusInterface):
     interface_names = ['org.freedesktop.NetworkManager.Wimax.NSP']
@@ -764,7 +767,8 @@ class fixups(object):
 NetworkManager = NetworkManager()
 Settings = Settings()
 AgentManager = AgentManager()
-init_bus.close()
+if init_bus is not None:
+    init_bus.close()
 del init_bus
 del xml_cache
 
@@ -816,7 +820,6 @@ NM_DEVICE_TYPE_6LOWPAN = 28
 NM_DEVICE_TYPE_WIREGUARD = 29
 NM_DEVICE_TYPE_WIFI_P2P = 30
 NM_DEVICE_TYPE_VRF = 31
-NM_DEVICE_TYPE_LOOPBACK = 32
 NM_DEVICE_CAP_NONE = 0
 NM_DEVICE_CAP_NM_SUPPORTED = 1
 NM_DEVICE_CAP_CARRIER_DETECT = 2
