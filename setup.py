@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name = "python-networkmanager",
-      version = "2.2.1",
+      version = "2.2.2",
       author = "Dennis Kaarsemaker",
       author_email = "dennis@kaarsemaker.net",
       url = "http://github.com/seveas/python-networkmanager",
